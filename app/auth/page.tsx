@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner"
+import { useRouter } from "next/navigation";
 
 export default function AuthPage() {
     const supabase = createClient();
-
+    const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -21,7 +22,7 @@ export default function AuthPage() {
             const checkSession = async () => {
                 const { data } = await supabase.auth.getUser();
                 if (data.user) {
-                    window.location.href = "/chat";
+                    router.push("/");
                 }
             };
 
@@ -58,7 +59,7 @@ export default function AuthPage() {
         setLoading(false);
 
         if (error) alert(error.message);
-        else window.location.href = "/chat";
+        else router.push("/");
     };
 
     if (loading) {
