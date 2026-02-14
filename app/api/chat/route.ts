@@ -12,33 +12,33 @@ const supabase = createClient(
 );
 
 export async function POST(req: NextRequest) {
-    // try {
-    const { messages, userId } = await req.json();
-    const lastMessage = messages[messages.length - 1].content;
+    try {
+        const { messages, userId } = await req.json();
+        const lastMessage = messages[messages.length - 1].content;
 
-    // 1️⃣ Convert question → embedding
-    const embedModel = genAI.getGenerativeModel({
-        model: "gemini-embedding-001",
-    });
+        // 1️⃣ Convert question → embedding
+        const embedModel = genAI.getGenerativeModel({
+            model: "gemini-embedding-001",
+        });
 
-    const embedResult = await embedModel.embedContent(lastMessage);
-    const queryEmbedding = embedResult.embedding.values;
+        const embedResult = await embedModel.embedContent(lastMessage);
+        const queryEmbedding = embedResult.embedding.values;
 
-    // 2️⃣ Fetch relevant document chunks
-    const { data: docs } = await supabase.rpc("match_chunks", {
-        query_embedding: queryEmbedding,
-        match_count: 5,
-        user_id: userId,
-    });
+        // 2️⃣ Fetch relevant document chunks
+        const { data: docs } = await supabase.rpc("match_chunks", {
+            query_embedding: queryEmbedding,
+            match_count: 5,
+            user_id: userId,
+        });
 
-    const docContext = docs?.map((d: any) => d.content).join("\n\n") || "";
+        const docContext = docs?.map((d: any) => d.content).join("\n\n") || "";
 
-    // 3️⃣ Build conversation prompt
-    const conversation = messages
-        .map((m: any) => `${m.role}: ${m.content}`)
-        .join("\n");
+        // 3️⃣ Build conversation prompt
+        const conversation = messages
+            .map((m: any) => `${m.role}: ${m.content}`)
+            .join("\n");
 
-    const finalPrompt = `
+        const finalPrompt = `
         You are a professional resume analyst and career assistant.
 
         Using the DOCUMENT CONTEXT and CONVERSATION below, generate a structured response.
@@ -70,17 +70,17 @@ export async function POST(req: NextRequest) {
 
 
 
-    // 4️⃣ Ask Gemini
-    const model = genAI.getGenerativeModel({
-        model: "gemini-flash-latest",
-    });
+        // 4️⃣ Ask Gemini
+        const model = genAI.getGenerativeModel({
+            model: "gemini-flash-latest",
+        });
 
-    const result = await model.generateContent(finalPrompt);
-    const reply = result.response.text();
+        const result = await model.generateContent(finalPrompt);
+        const reply = result.response.text();
 
-    return NextResponse.json({ reply });
-    // } catch (e) {
-    //     console.error(e);
-    //     return NextResponse.json({ error: "AI failed" }, { status: 500 });
-    // }
+        return NextResponse.json({ reply });
+    } catch (e) {
+        console.error(e);
+        return NextResponse.json({ error: "AI failed" }, { status: 500 });
+    }
 }
