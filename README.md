@@ -93,7 +93,7 @@ This project demonstrates how to build a scalable AI product from scratch using 
 
 ### 📄 Document Memory Model
 
-* Uploaded documents are **global per user**
+* Uploaded documents are **global per user**, not chat specific
 * Once a file is uploaded and processed, it becomes part of the user's knowledge base
 * AI can use these documents across all chat sessions
 

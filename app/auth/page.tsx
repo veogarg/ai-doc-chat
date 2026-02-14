@@ -71,7 +71,7 @@ export default function AuthPage() {
         <div className="flex items-center justify-center min-h-screen bg-muted">
             <Card className="w-[400px]">
                 <CardHeader>
-                    <CardTitle>AI Chat Login</CardTitle>
+                    <CardTitle>DocuMind Login</CardTitle>
                 </CardHeader>
 
                 <CardContent className="space-y-4">
