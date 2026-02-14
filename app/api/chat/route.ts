@@ -1,64 +1,86 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { genAI } from "@/lib/gemini";
-import { supabase } from "@/lib/supabase";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createClient } from "@supabase/supabase-js";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: NextRequest) {
     try {
-        const { question } = await req.json();
+        const { messages, userId } = await req.json();
+        const lastMessage = messages[messages.length - 1].content;
 
-        const embeddingModel = genAI.getGenerativeModel({
+        // 1️⃣ Convert question → embedding
+        const embedModel = genAI.getGenerativeModel({
             model: "gemini-embedding-001",
         });
 
-        // 1. Convert question → embedding
-        const embedResult = await embeddingModel.embedContent(question);
+        const embedResult = await embedModel.embedContent(lastMessage);
         const queryEmbedding = embedResult.embedding.values;
 
-        // 2. Find similar chunks from Supabase
-        const { data: docs } = await supabase.rpc("match_documents", {
+        // 2️⃣ Fetch relevant document chunks
+        const { data: docs } = await supabase.rpc("match_chunks", {
             query_embedding: queryEmbedding,
             match_count: 5,
+            user_id: userId,
         });
 
-        const context = docs
-            ?.map((d: { doc_name: any; content: any; }) => `[Source: ${d.doc_name}]\n${d.content}`)
-            .join("\n\n");
+        const docContext = docs?.map((d: any) => d.content).join("\n\n") || "";
+
+        // 3️⃣ Build conversation prompt
+        const conversation = messages
+            .map((m: any) => `${m.role}: ${m.content}`)
+            .join("\n");
+
+        const finalPrompt = `
+        You are a professional resume analyst and career assistant.
+
+        Using the DOCUMENT CONTEXT and CONVERSATION below, generate a structured response.
+
+        Rules:
+        - Do NOT use markdown symbols like ### or **
+        - Write clean plain text
+        - Replace the template sections with actual content from the resume
+        - Do NOT return placeholders like "<short paragraph>" or "skill 1"
+        - Fill everything with real information from the documents
+
+        If the user asks for a summary, respond in this exact structure:
+
+        Professional Summary:
+        Write a concise 3–4 sentence summary of the candidate based on the resume.
+
+        Key Skills:
+        List the main technical skills mentioned in the resume.
+
+        Experience Highlights:
+        List 2–4 strong career highlights from the resume.
+
+        DOCUMENT CONTEXT:
+        ${docContext}
+
+        CONVERSATION:
+        ${conversation}
+    `;
 
 
 
-        // 3. Send context + question to Gemini
-        const chatModel = genAI.getGenerativeModel({
+        // 4️⃣ Ask Gemini
+        const model = genAI.getGenerativeModel({
             model: "gemini-flash-latest",
         });
 
-        const prompt = `
-You are an expert resume analyst.
+        const result = await model.generateContent(finalPrompt);
+        const reply = result.response.text();
 
-Answer using ONLY the resume context below.
-
-If the question requires summarizing, analyzing, or rewriting,
-generate the answer from the given information.
-
-Do not make up skills, companies, or achievements.
-
-Resume Context:
-${context}
-
-Question:
-${question}
-`;
-
-
-
-
-        const result = await chatModel.generateContent(prompt);
-        const response = result.response.text();
-
-        return NextResponse.json({ answer: response });
-    } catch (err) {
-        console.error(err);
-        return NextResponse.json({ error: "Chat failed" }, { status: 500 });
+        return NextResponse.json({ reply });
+    } catch (e) {
+        console.error(e);
+        return NextResponse.json({ error: "AI failed" }, { status: 500 });
     }
 }
