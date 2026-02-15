@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { APP_NAME } from "@/lib/constants/config";
 
 interface AuthFormProps {
     onSignIn: (email: string, password: string) => Promise<void>;
@@ -30,7 +31,6 @@ export function AuthForm({ onSignIn, onSignUp, loading = false }: AuthFormProps)
         try {
             setError(null);
             await onSignUp(email, password);
-            alert("Check your email to confirm!");
         } catch (err: any) {
             setError(err.message || "Sign up failed");
         }
@@ -39,7 +39,7 @@ export function AuthForm({ onSignIn, onSignUp, loading = false }: AuthFormProps)
     return (
         <Card className="w-[400px]">
             <CardHeader>
-                <CardTitle>DocuMind Login</CardTitle>
+                <CardTitle>{APP_NAME} Login</CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-4">

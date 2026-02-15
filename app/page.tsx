@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { chatService } from "@/lib/services/chat.service";
@@ -8,6 +8,7 @@ import { chatService } from "@/lib/services/chat.service";
 export default function Home() {
   const router = useRouter();
   const { user, loading } = useUser();
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     if (loading) return;
@@ -16,6 +17,10 @@ export default function Home() {
       router.push("/auth");
       return;
     }
+
+    // Prevent duplicate initialization in React Strict Mode
+    if (initializedRef.current) return;
+    initializedRef.current = true;
 
     initializeChat();
   }, [user, loading, router]);
