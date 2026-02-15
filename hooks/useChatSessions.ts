@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { chatService } from "@/lib/services/chat.service";
 import type { ChatSession } from "@/lib/types/chat.types";
 
@@ -9,13 +9,9 @@ export function useChatSessions(userId?: string) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    useEffect(() => {
-        if (userId) {
-            loadSessions();
-        }
-    }, [userId]);
+    const loadSessions = useCallback(async () => {
+        if (!userId) return;
 
-    const loadSessions = async () => {
         try {
             setLoading(true);
             setError(null);
@@ -27,7 +23,11 @@ export function useChatSessions(userId?: string) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [userId]);
+
+    useEffect(() => {
+        loadSessions();
+    }, [loadSessions]);
 
     const createSession = async (userId: string, title?: string) => {
         try {

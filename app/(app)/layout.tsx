@@ -9,11 +9,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Spinner } from "@/components/ui/spinner";
+import { ChatSessionProvider } from "@/contexts/ChatSessionContext";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const { user, loading: userLoading } = useUser();
-    const { sessions } = useChatSessions(user?.id);
+    const { sessions, updateSessionTitle, createSession } = useChatSessions(user?.id);
     const { documents } = useDocuments(user?.id);
     const { signOut } = useAuth();
 
@@ -26,8 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const handleNewChat = async () => {
         if (!user) return;
 
-        const { chatService } = await import("@/lib/services/chat.service");
-        const newSession = await chatService.createChatSession(user.id);
+        const newSession = await createSession(user.id);
         router.push(`/chat/${newSession.id}`);
     };
 
@@ -44,17 +44,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <div className="flex h-screen">
-            <Sidebar
-                sessions={sessions}
-                documents={documents}
-                onNewChat={handleNewChat}
-            />
+        <ChatSessionProvider updateSessionTitle={updateSessionTitle}>
+            <div className="flex h-screen">
+                <Sidebar
+                    sessions={sessions}
+                    documents={documents}
+                    onNewChat={handleNewChat}
+                />
 
-            <div className="flex-1 flex flex-col">
-                <Header email={user.email ?? null} onLogout={signOut} />
-                <div className="flex-1 p-6 overflow-auto">{children}</div>
+                <div className="flex-1 flex flex-col">
+                    <Header email={user.email ?? null} onLogout={signOut} />
+                    <div className="flex-1 p-6 overflow-auto">{children}</div>
+                </div>
             </div>
-        </div>
+        </ChatSessionProvider>
     );
 }

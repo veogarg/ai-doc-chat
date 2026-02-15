@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useFileUpload } from "@/hooks/useFileUpload";
+import { useChatSession } from "@/contexts/ChatSessionContext";
 import { MessageList } from "@/components/chat/MessageList";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { aiService } from "@/lib/services/ai.service";
@@ -15,8 +16,9 @@ export default function ChatPage() {
     const { id } = useParams();
     const router = useRouter();
     const { user } = useUser();
-    const { messages, addMessage, addOptimisticMessage, setMessages } = useChatMessages(id as string);
+    const { messages, addMessage, setMessages } = useChatMessages(id as string);
     const { status, uploadFile, isUploading } = useFileUpload();
+    const { updateSessionTitle } = useChatSession();
     const [aiThinking, setAiThinking] = useState(false);
 
     const handleSendMessage = async (content: string) => {
@@ -31,7 +33,7 @@ export default function ChatPage() {
             // Update chat title if it's a new chat
             const session = await chatService.getChatSession(id as string);
             if (session?.title === APP_CONFIG.DEFAULT_CHAT_TITLE) {
-                await chatService.updateChatTitle(id as string, content.slice(0, 40));
+                await updateSessionTitle(id as string, content.slice(0, 40));
             }
 
             // Get AI response

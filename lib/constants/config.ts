@@ -1,3 +1,5 @@
+export const APP_NAME = "DocuMind";
+
 export const APP_CONFIG = {
     CHUNK_SIZE: 800,
     MAX_MATCH_COUNT: 5,

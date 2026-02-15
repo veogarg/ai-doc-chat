@@ -1,40 +1,28 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/lib/services/auth.service";
-import type { User } from "@/lib/types/user.types";
+import { useUserContext } from "@/contexts/UserContext";
 
 export function useAuth() {
-    const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
     const router = useRouter();
-
-    useEffect(() => {
-        loadUser();
-    }, []);
-
-    const loadUser = async () => {
-        try {
-            setLoading(true);
-            const currentUser = await authService.getCurrentUser();
-            setUser(currentUser);
-        } catch (error) {
-            console.error("Failed to load user:", error);
-            setUser(null);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { user, loading: contextLoading, setUser } = useUserContext();
+    const [loading, setLoading] = useState(false);
 
     const signIn = async (email: string, password: string) => {
         setLoading(true);
         try {
-            const { error } = await authService.signIn(email, password);
+            const { data, error } = await authService.signIn(email, password);
             if (error) throw error;
 
-            await loadUser();
-            router.push("/");
+            if (data.user) {
+                setUser(data.user);
+                router.push("/");
+            } else {
+                setUser(null);
+                router.push("/auth");
+            }
         } catch (error: any) {
             throw new Error(error.message || "Sign in failed");
         } finally {
@@ -45,8 +33,15 @@ export function useAuth() {
     const signUp = async (email: string, password: string) => {
         setLoading(true);
         try {
-            const { error } = await authService.signUp(email, password);
+            const { data, error } = await authService.signUp(email, password);
             if (error) throw error;
+            if (data.user) {
+                setUser(data.user);
+                router.push("/");
+            } else {
+                setUser(null);
+                router.push("/auth");
+            }
         } finally {
             setLoading(false);
         }
@@ -58,8 +53,8 @@ export function useAuth() {
             await authService.signOut();
             setUser(null);
             router.push("/auth");
-        } catch (error) {
-            console.error("Sign out failed:", error);
+        } catch (error: any) {
+            throw new Error(error.message || "Sign out failed");
         } finally {
             setLoading(false);
         }
@@ -67,7 +62,7 @@ export function useAuth() {
 
     return {
         user,
-        loading,
+        loading: loading || contextLoading,
         signIn,
         signUp,
         signOut,
