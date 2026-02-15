@@ -54,6 +54,9 @@ export async function generateRAGResponse(
 
     const model = genAI.getGenerativeModel({
         model: APP_CONFIG.GEMINI_CHAT_MODEL,
+        generationConfig: {
+            temperature: 0.7
+        }
     });
 
     const result = await model.generateContent(prompt);
@@ -67,25 +70,20 @@ function buildRAGPrompt(context: string, conversation: string): string {
     return `
 You are a professional resume analyst and career assistant.
 
-Using the DOCUMENT CONTEXT and CONVERSATION below, generate a structured response.
+Use the DOCUMENT CONTEXT and CONVERSATION to generate a clear, natural, and human-like response.
 
 Rules:
-- Do NOT use markdown symbols like ### or **
-- Write clean plain text
-- Replace the template sections with actual content from the resume
-- Do NOT return placeholders like "<short paragraph>" or "skill 1"
-- Fill everything with real information from the documents
+    - Use plain text
+    - Do not use markdown symbols
+    - Do not use placeholders
+    - Always extract real information from the resume
 
-If the user asks for a summary, respond in this exact structure:
-
-Professional Summary:
-Write a concise 3–4 sentence summary of the candidate based on the resume.
-
-Key Skills:
-List the main technical skills mentioned in the resume.
-
-Experience Highlights:
-List 2–4 strong career highlights from the resume.
+Formatting behavior:
+    - If the user asks for a professional summary, provide:
+        - A 3–4 sentence summary
+        - A list of key skills
+        - 2–4 strong experience highlights
+    - For all other questions, respond naturally without forcing a rigid structure.
 
 DOCUMENT CONTEXT:
 ${context}

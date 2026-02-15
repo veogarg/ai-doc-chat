@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { useChatMessages } from "@/hooks/useChatMessages";
 import { useFileUpload } from "@/hooks/useFileUpload";
@@ -11,10 +11,10 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { aiService } from "@/lib/services/ai.service";
 import { chatService } from "@/lib/services/chat.service";
 import { APP_CONFIG } from "@/lib/constants/config";
+import { Sparkle } from 'lucide-react';
 
 export default function ChatPage() {
     const { id } = useParams();
-    const router = useRouter();
     const { user } = useUser();
     const { messages, addMessage, setMessages } = useChatMessages(id as string);
     const { status, uploadFile, isUploading } = useFileUpload();
@@ -72,9 +72,6 @@ export default function ChatPage() {
                     content: `Document "${result.fileName}" is ready. You can now ask questions about it.`,
                 },
             ]);
-
-            // Reload page to refresh document list
-            router.refresh();
         } catch (error) {
             console.error("Failed to upload file:", error);
         }
@@ -83,6 +80,14 @@ export default function ChatPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-80px)]">
             <MessageList messages={messages} />
+            {
+                aiThinking && (
+                    <div className="flex items-center gap-2 p-4 text-muted-foreground">
+                        <Sparkle className="w-5 h-5 animate-spin-slow" />
+                        <p className="text-sm animate-pulse">Thinking...</p>
+                    </div>
+                )
+            }
             <ChatInput
                 onSendMessage={handleSendMessage}
                 onFileUpload={handleFileUpload}

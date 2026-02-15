@@ -10,12 +10,13 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
 import { Spinner } from "@/components/ui/spinner";
 import { ChatSessionProvider } from "@/contexts/ChatSessionContext";
+import { DocumentsProvider } from "@/contexts/DocumentsContext";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function AppLayoutContent({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const { user, loading: userLoading } = useUser();
     const { sessions, updateSessionTitle, createSession } = useChatSessions(user?.id);
-    const { documents } = useDocuments(user?.id);
+    const { documents } = useDocuments();
     const { signOut } = useAuth();
 
     useEffect(() => {
@@ -58,5 +59,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </div>
             </div>
         </ChatSessionProvider>
+    );
+}
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+    const { user } = useUser();
+
+    return (
+        <DocumentsProvider userId={user?.id}>
+            <AppLayoutContent>{children}</AppLayoutContent>
+        </DocumentsProvider>
     );
 }

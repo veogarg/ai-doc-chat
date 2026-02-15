@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { documentService } from "@/lib/services/document.service";
 import { aiService } from "@/lib/services/ai.service";
+import { useDocuments } from "@/hooks/useDocuments";
 
 export interface UploadStatus {
     uploading: boolean;
@@ -12,6 +13,7 @@ export interface UploadStatus {
 }
 
 export function useFileUpload() {
+    const { addDocument } = useDocuments();
     const [status, setStatus] = useState<UploadStatus>({
         uploading: false,
         processing: false,
@@ -39,7 +41,10 @@ export function useFileUpload() {
             });
 
             // Save document record
-            await documentService.saveDocumentRecord(userId, file.name, filePath);
+            const documentRecord = await documentService.saveDocumentRecord(userId, file.name, filePath);
+
+            // Add to documents context immediately
+            addDocument(documentRecord);
 
             // Process file for embeddings
             await aiService.processDocument(filePath, file.name, userId);
