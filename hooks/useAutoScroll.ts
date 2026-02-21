@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 export function useAutoScroll<T extends HTMLElement = HTMLDivElement>(
-    dependencies: any[] = []
+    trigger: unknown
 ) {
     const ref = useRef<T>(null);
 
@@ -11,7 +11,7 @@ export function useAutoScroll<T extends HTMLElement = HTMLDivElement>(
         if (ref.current) {
             ref.current.scrollIntoView({ behavior: "smooth" });
         }
-    }, dependencies);
+    }, [trigger]);
 
     return ref;
 }

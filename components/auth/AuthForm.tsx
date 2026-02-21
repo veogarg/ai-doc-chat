@@ -22,8 +22,9 @@ export function AuthForm({ onSignIn, onSignUp, loading = false }: AuthFormProps)
         try {
             setError(null);
             await onSignIn(email, password);
-        } catch (err: any) {
-            setError(err.message || "Sign in failed");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Sign in failed";
+            setError(message);
         }
     };
 
@@ -31,8 +32,9 @@ export function AuthForm({ onSignIn, onSignUp, loading = false }: AuthFormProps)
         try {
             setError(null);
             await onSignUp(email, password);
-        } catch (err: any) {
-            setError(err.message || "Sign up failed");
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : "Sign up failed";
+            setError(message);
         }
     };
 

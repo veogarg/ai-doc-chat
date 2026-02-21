@@ -11,7 +11,7 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { aiService } from "@/lib/services/ai.service";
 import { chatService } from "@/lib/services/chat.service";
 import { APP_CONFIG } from "@/lib/constants/config";
-import { Sparkle } from 'lucide-react';
+import type { ChatMessage } from "@/lib/types/chat.types";
 
 export default function ChatPage() {
     const { id } = useParams();
@@ -36,17 +36,70 @@ export default function ChatPage() {
                 await updateSessionTitle(id as string, content.slice(0, 40));
             }
 
-            // Get AI response
+            // Stream AI response
             const updatedMessages = [...messages, { session_id: id as string, role: "user" as const, content }];
-            const aiReply = await aiService.generateResponse({
-                messages: updatedMessages,
-                userId: user.id,
-            });
+            const draftId = `stream-${Date.now()}`;
 
-            // Add AI response
-            await addMessage("ai", aiReply);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: draftId,
+                    session_id: id as string,
+                    role: "ai",
+                    content: "",
+                    streaming: true,
+                } as ChatMessage,
+            ]);
+
+            const aiReply = await aiService.generateResponseStream(
+                {
+                    messages: updatedMessages,
+                    userId: user.id,
+                },
+                (_, aggregate) => {
+                    setMessages((prev) =>
+                        prev.map((message) =>
+                            message.id === draftId
+                                ? {
+                                    ...message,
+                                    content: aggregate,
+                                    streaming: true,
+                                }
+                                : message
+                        )
+                    );
+                }
+            );
+
+            const finalReply = aiReply.trim() || "I could not generate a response.";
+
+            setMessages((prev) =>
+                prev.map((message) =>
+                    message.id === draftId
+                        ? {
+                            ...message,
+                            content: finalReply,
+                            streaming: false,
+                        }
+                        : message
+                )
+            );
+
+            await chatService.saveMessage({
+                session_id: id as string,
+                role: "ai",
+                content: finalReply,
+            });
         } catch (error) {
             console.error("Failed to send message:", error);
+            setMessages((prev) => [
+                ...prev,
+                {
+                    session_id: id as string,
+                    role: "ai",
+                    content: "The request failed. Please retry.",
+                },
+            ]);
         } finally {
             setAiThinking(false);
         }
@@ -80,14 +133,6 @@ export default function ChatPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-80px)]">
             <MessageList messages={messages} />
-            {
-                aiThinking && (
-                    <div className="flex items-center gap-2 p-4 text-muted-foreground">
-                        <Sparkle className="w-5 h-5 animate-spin-slow" />
-                        <p className="text-sm animate-pulse">Thinking...</p>
-                    </div>
-                )
-            }
             <ChatInput
                 onSendMessage={handleSendMessage}
                 onFileUpload={handleFileUpload}

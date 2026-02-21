@@ -1,0 +1,14 @@
+[
+  {
+    "question": "Give me a concise professional summary of the candidate.",
+    "expectedKeywords": ["summary", "experience", "skills"]
+  },
+  {
+    "question": "What are the strongest technical skills across all uploaded documents?",
+    "expectedKeywords": ["python", "javascript", "sql", "aws"]
+  },
+  {
+    "question": "List the most important achievements with measurable impact.",
+    "expectedKeywords": ["improved", "increased", "reduced", "led"]
+  }
+]

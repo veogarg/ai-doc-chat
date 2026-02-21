@@ -15,13 +15,17 @@ This project demonstrates how to build a scalable AI product from scratch using 
 * Multi-session chat (like ChatGPT)
 * Persistent conversation history
 * Context-aware AI responses
+* Streaming AI responses (token-by-token)
 
 ### 📄 Document Intelligence (RAG)
 
 * Upload PDFs and files
 * Automatic text extraction
+* Advanced section-aware chunking with overlap
 * Chunking + embedding generation
 * Vector search using pgvector
+* Reranking for better retrieval precision
+* Cross-document synthesis
 * AI answers grounded in user documents
 
 ### 🔐 Secure Multi-Tenant Architecture
@@ -34,9 +38,16 @@ This project demonstrates how to build a scalable AI product from scratch using 
 ### 🧠 Smart Context Injection
 
 * Query → embedding → semantic search
+* Intelligent caching (embedding, retrieval, response)
 * Top matching chunks fed to AI
 * Reduced hallucinations
 * Document-aware responses
+
+### 📈 Monitoring & Evaluation
+
+* Cost and performance instrumentation for AI pipeline stages
+* Retry logic for resilient external calls
+* Automated evaluation endpoint + CLI script
 
 ### 💬 Polished Chat UX
 
@@ -123,7 +134,7 @@ Pages → Components → Hooks → Services → Data Access → External APIs
 
 * Session-based conversations
 * Message persistence
-* AI response streaming (planned)
+* AI response streaming
 
 ### Document Pipeline
 
@@ -143,7 +154,9 @@ Pages → Components → Hooks → Services → Data Access → External APIs
 ### Retrieval Layer
 
 * Semantic search via pgvector
+* Hybrid reranking (semantic + lexical)
 * Context injection into prompts
+* Cross-document synthesis notes for generation
 
 ---
 
@@ -271,6 +284,12 @@ GEMINI_API_KEY=
 
 ```bash
 npm run dev
+```
+
+### 5. Run Automated Evaluation
+
+```bash
+npm run evaluate -- --userId=<SUPABASE_USER_ID> --out=eval-report.json
 ```
 
 ---
@@ -461,6 +480,19 @@ as $$
 $$;
 ```
 
+### 9️⃣ Run RAG Upgrade Migration (Required for new features)
+
+Run the SQL in:
+
+```bash
+supabase/rag_upgrade.sql
+```
+
+This adds:
+* `match_chunks_v2` (enhanced retrieval metadata)
+* `ai_observability_events` (cost/perf monitoring)
+* `rag_evaluations` (automated evaluation reports)
+
 ---
 
 After completing the above steps, the project will be fully functional with:
@@ -479,7 +511,6 @@ This project intentionally prioritizes core AI architecture over full production
 
 ### UX Improvements
 
-* Streaming AI responses (token-by-token)
 * Loading skeleton when opening a chat
 * Empty-state UI for new conversations
 * Toast-based error handling instead of console logs
@@ -495,13 +526,11 @@ This project intentionally prioritizes core AI architecture over full production
 ### Performance Enhancements
 
 * Background job queue for document processing
-* Caching frequent embeddings/search results
 * Pagination for large chat histories
 
 ### AI Enhancements
 
 * Auto-summarization on document upload
-* Multi-document context weighting
 * Model switching (Gemini / OpenAI)
 
 These are intentionally left out to keep the initial version focused, understandable, and easy to deploy.

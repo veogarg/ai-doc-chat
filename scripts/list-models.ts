@@ -16,7 +16,7 @@ if (fs.existsSync(envPath)) {
 
 async function main() {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" }); // Dummy model init to get client, actually we need the client itself
+    genAI.getGenerativeModel({ model: "gemini-pro" });
 
     try {
         // Accessing the model manager directly if possible, or just using a known endpoint?
@@ -43,7 +43,7 @@ async function main() {
 
         if (data.models) {
             console.log("Available models:");
-            data.models.forEach((m: any) => {
+            (data.models as Array<{ name?: string; supportedGenerationMethods?: string[] }>).forEach((m) => {
                 console.log(`- ${m.name} (${m.supportedGenerationMethods})`);
             });
         } else {

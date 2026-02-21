@@ -11,6 +11,7 @@ export interface ChatMessage {
     role: "user" | "ai";
     content: string;
     created_at?: string;
+    streaming?: boolean;
 }
 
 export interface ChatMessageInput {

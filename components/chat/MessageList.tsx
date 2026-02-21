@@ -9,7 +9,7 @@ interface MessageListProps {
 }
 
 export function MessageList({ messages }: MessageListProps) {
-    const bottomRef = useAutoScroll<HTMLDivElement>([messages]);
+    const bottomRef = useAutoScroll<HTMLDivElement>(messages);
 
     return (
         <div className="flex-1 overflow-y-auto space-y-3 p-4">

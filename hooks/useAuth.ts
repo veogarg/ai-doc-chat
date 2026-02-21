@@ -23,8 +23,9 @@ export function useAuth() {
                 setUser(null);
                 router.push("/auth");
             }
-        } catch (error: any) {
-            throw new Error(error.message || "Sign in failed");
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Sign in failed";
+            throw new Error(message);
         } finally {
             setLoading(false);
         }
@@ -53,8 +54,9 @@ export function useAuth() {
             await authService.signOut();
             setUser(null);
             router.push("/auth");
-        } catch (error: any) {
-            throw new Error(error.message || "Sign out failed");
+        } catch (error: unknown) {
+            const message = error instanceof Error ? error.message : "Sign out failed";
+            throw new Error(message);
         } finally {
             setLoading(false);
         }
