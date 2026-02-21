@@ -19,7 +19,13 @@ export function ChatMessage({ message }: ChatMessageProps) {
             </div>
             <div className="whitespace-pre-line text-sm">
                 {message.content}
-                {message.streaming ? "▋" : ""}
+                {message.streaming && (
+                    <div className="flex gap-1 mt-2 items-center h-4">
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+                    </div>
+                )}
             </div>
         </div>
     );

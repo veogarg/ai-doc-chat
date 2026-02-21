@@ -11,7 +11,6 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { aiService } from "@/lib/services/ai.service";
 import { chatService } from "@/lib/services/chat.service";
 import { APP_CONFIG } from "@/lib/constants/config";
-import { Sparkle } from 'lucide-react';
 import type { ChatMessage } from "@/lib/types/chat.types";
 
 export default function ChatPage() {
@@ -134,14 +133,6 @@ export default function ChatPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-80px)]">
             <MessageList messages={messages} />
-            {
-                aiThinking && (
-                    <div className="flex items-center gap-2 p-4 text-muted-foreground">
-                        <Sparkle className="w-5 h-5 animate-spin-slow" />
-                        <p className="text-sm animate-pulse">Thinking...</p>
-                    </div>
-                )
-            }
             <ChatInput
                 onSendMessage={handleSendMessage}
                 onFileUpload={handleFileUpload}

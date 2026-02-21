@@ -236,6 +236,9 @@ export async function generateFromPrompt(
 ): Promise<string> {
     const model = genAI.getGenerativeModel({
         model: APP_CONFIG.GEMINI_CHAT_MODEL,
+        generationConfig: {
+            temperature: 0.7,
+        }
     });
 
     const result = await measureStage(metrics, "generate_response", () =>
