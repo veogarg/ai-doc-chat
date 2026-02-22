@@ -37,6 +37,7 @@ Frontend:
 - Next.js App Router
 - React + TypeScript
 - Tailwind + shadcn/ui
+- Sonner (Toast notifications)
 
 Backend:
 - Next.js Route Handlers

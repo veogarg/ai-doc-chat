@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
 import { chatService } from "@/lib/services/chat.service";
+import { toast } from "sonner";
 
 export default function Home() {
   const router = useRouter();
@@ -24,6 +25,7 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Failed to initialize chat:", error);
+      toast.error("Failed to initialize chat session");
     }
   }, [router, user]);
 

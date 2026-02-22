@@ -12,6 +12,7 @@ import { aiService } from "@/lib/services/ai.service";
 import { chatService } from "@/lib/services/chat.service";
 import { APP_CONFIG } from "@/lib/constants/config";
 import type { ChatMessage } from "@/lib/types/chat.types";
+import { toast } from "sonner";
 
 export default function ChatPage() {
     const { id } = useParams();
@@ -92,6 +93,7 @@ export default function ChatPage() {
             });
         } catch (error) {
             console.error("Failed to send message:", error);
+            toast.error(error instanceof Error ? error.message : "Failed to send message");
             setMessages((prev) => [
                 ...prev,
                 {
@@ -127,6 +129,7 @@ export default function ChatPage() {
             ]);
         } catch (error) {
             console.error("Failed to upload file:", error);
+            // toast error is already handled inside uploadFile hook
         }
     };
 

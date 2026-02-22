@@ -4,6 +4,8 @@ import { useState } from "react";
 import { documentService } from "@/lib/services/document.service";
 import { aiService } from "@/lib/services/ai.service";
 import { useDocuments } from "@/hooks/useDocuments";
+import type { UserDocument } from "@/lib/types/document.types";
+import { toast } from "sonner";
 
 export interface UploadStatus {
     uploading: boolean;
@@ -13,7 +15,7 @@ export interface UploadStatus {
 }
 
 export function useFileUpload() {
-    const { addDocument } = useDocuments();
+    const { addDocument, removeDocument } = useDocuments();
     const [status, setStatus] = useState<UploadStatus>({
         uploading: false,
         processing: false,
@@ -22,6 +24,9 @@ export function useFileUpload() {
     });
 
     const uploadFile = async (file: File, userId: string) => {
+        let filePath: string | null = null;
+        let documentRecord: UserDocument | null = null;
+
         try {
             setStatus({
                 uploading: true,
@@ -31,7 +36,7 @@ export function useFileUpload() {
             });
 
             // Upload file to storage
-            const filePath = await documentService.uploadFile(file, userId);
+            filePath = await documentService.uploadFile(file, userId);
 
             setStatus({
                 uploading: false,
@@ -41,7 +46,7 @@ export function useFileUpload() {
             });
 
             // Save document record
-            const documentRecord = await documentService.saveDocumentRecord(userId, file.name, filePath);
+            documentRecord = await documentService.saveDocumentRecord(userId, file.name, filePath);
 
             // Add to documents context immediately
             addDocument(documentRecord);
@@ -56,8 +61,26 @@ export function useFileUpload() {
                 error: null,
             });
 
+            toast.success(`Successfully uploaded and processed ${file.name}`);
+
             return { fileName: file.name, filePath };
         } catch (error) {
+            if (filePath) {
+                try {
+                    await documentService.deleteDocumentAndRelated(
+                        userId,
+                        documentRecord?.id || null,
+                        file.name,
+                        filePath
+                    );
+                    if (documentRecord?.id) {
+                        removeDocument(documentRecord.id);
+                    }
+                } catch (cleanupError) {
+                    console.error("Failed to cleanup after process error:", cleanupError);
+                }
+            }
+
             const err = error as Error;
             setStatus({
                 uploading: false,
@@ -65,6 +88,8 @@ export function useFileUpload() {
                 message: null,
                 error: err,
             });
+
+            toast.error(err.message || `Failed to process ${file.name}`);
             throw err;
         }
     };

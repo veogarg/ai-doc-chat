@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { chatService } from "@/lib/services/chat.service";
 import type { ChatMessage } from "@/lib/types/chat.types";
+import { toast } from "sonner";
 
 export function useChatMessages(sessionId: string) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -18,6 +19,7 @@ export function useChatMessages(sessionId: string) {
         } catch (err) {
             setError(err as Error);
             console.error("Failed to load messages:", err);
+            toast.error("Failed to load conversation history");
         } finally {
             setLoading(false);
         }

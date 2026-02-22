@@ -57,6 +57,33 @@ export class DocumentService {
 
         return data;
     }
+
+    async deleteDocumentAndRelated(
+        userId: string,
+        documentId: string | null,
+        fileName: string,
+        filePath: string
+    ): Promise<void> {
+        // Delete from storage
+        await this.supabase.storage
+            .from(STORAGE_BUCKETS.USER_FILES)
+            .remove([filePath]);
+
+        // Delete chunks if any
+        await this.supabase
+            .from(DATABASE_TABLES.DOCUMENT_CHUNKS)
+            .delete()
+            .eq("user_id", userId)
+            .eq("file_name", fileName);
+
+        // Delete document record if it was created
+        if (documentId) {
+            await this.supabase
+                .from(DATABASE_TABLES.USER_DOCUMENTS)
+                .delete()
+                .eq("id", documentId);
+        }
+    }
 }
 
 // Singleton instance

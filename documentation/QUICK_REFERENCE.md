@@ -139,6 +139,8 @@ Run `supabase/rag_upgrade.sql` and verify:
 - Poor retrieval quality:
   - verify `match_chunks_v2` exists
   - inspect reranked chunks in server logs
+- Toast notifications not showing:
+  - make sure `<Toaster />` from `sonner` is in `app/layout.tsx`
 
 ## Environment Variables
 
