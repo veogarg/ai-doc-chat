@@ -1,133 +1,77 @@
-# Network Call Optimization Analysis
+# Network Optimization Analysis
 
-## Current Architecture
+## Current Network Profile
 
-### ✅ Already Optimized: User Data
-- **Pattern**: Context-based with single source of truth
-- **Implementation**: `UserContext` + `useUser` hook
-- **Location**: Root layout (`app/layout.tsx`)
-- **Network Calls**: **1 call** per session (cached globally)
-- **Benefit**: All components share the same user data without re-fetching
+## 1. Initial authenticated app load
+- `auth.getUser()` via `UserContext`
+- `chat_sessions` fetch via `useChatSessions`
+- `user_documents` fetch via `DocumentsContext`
 
----
+Total: 3 primary calls.
 
-## Optimization Opportunities
+## 2. Open a chat session
+- `messages` fetch for selected session
 
-### 🔴 HIGH PRIORITY: Chat Sessions
+Total: 1 call.
 
-**Current State:**
-- **Hook**: `useChatSessions(userId)`
-- **Usage**: Only in `app/(app)/layout.tsx`
-- **Network Calls**: 1 per app mount
-- **Issue**: ✅ Already optimized! Only called once in layout
+## 3. Send a message (streaming)
+Client-side calls:
+- save user message (`messages` insert)
+- get chat session title (`chat_sessions` select single)
+- update title only for `New Chat`
+- `/api/chat?stream=true`
+- save final AI message (`messages` insert)
 
-**Recommendation**: ✅ **No action needed** - Already following best practices
-- Sessions are fetched once in the layout
-- Passed down as props to Sidebar
-- Updates happen via local state management
+Server-side upstream calls in `/api/chat` (cache miss):
+- query embedding request to Gemini
+- retrieval RPC (`match_chunks_v2` or fallback `match_chunks`)
+- Gemini streaming generation
+- observability insert
 
----
+Cache-hit behavior:
+- embedding/retrieval/response caches can skip expensive upstream steps.
 
-### 🟡 MEDIUM PRIORITY: Documents
+## 4. Upload and process file
+Client-side:
+- storage upload
+- insert `user_documents`
+- `/api/process-file`
 
-**Current State:**
-- **Hook**: `useDocuments(userId)`
-- **Usage**: Only in `app/(app)/layout.tsx`
-- **Network Calls**: 1 per app mount
-- **Issue**: ✅ Already optimized! Only called once in layout
+Server-side in `/api/process-file`:
+- storage download
+- embedding calls per chunk (with cache)
+- delete existing chunks for file
+- insert chunk batches
+- observability insert
 
-**Potential Improvement**: Create a `DocumentsContext` for better state management
-- **Current**: Works fine, but if documents need to be accessed in other pages, we'd need context
-- **Benefit**: Centralized document management, easier to add/remove documents across the app
-- **Priority**: Medium (only if you plan to show documents in other pages)
+## Existing Optimization Mechanisms
 
----
+### Client-level
+- User state centralized in `UserContext`
+- Documents centralized in `DocumentsContext`
+- Optimistic message updates in `useChatMessages`
+- Streaming UI avoids long perceived latency
 
-### 🟢 LOW PRIORITY: Chat Messages
+### Server-level
+- user-scoped TTL caches for embeddings/retrieval/responses
+- reranking to reduce context noise before generation
+- retry wrapper for transient upstream failures
+- batched chunk insertion for vector writes
+- observability to identify bottlenecks
 
-**Current State:**
-- **Hook**: `useChatMessages(sessionId)`
-- **Usage**: Only in `app/(app)/chat/[id]/page.tsx`
-- **Network Calls**: 1 per chat session page load
-- **Issue**: ✅ Optimal! Messages are session-specific
+## Net Result
 
-**Recommendation**: ✅ **No action needed**
-- Messages are specific to each chat session
-- Creating a global context would add unnecessary complexity
-- Current implementation with optimistic updates is excellent
+The architecture is already optimized for its current scale:
+- minimized duplicate client fetches via contexts
+- reduced repeated AI compute through caching
+- better UX through streaming
+- measurable latency/token visibility via instrumentation
 
----
+## Remaining Practical Opportunities
 
-## Summary: Network Call Analysis
+1. Add Redis-backed shared cache for multi-instance deployments.
+2. Add background job queue for file processing to keep uploads responsive under heavy load.
+3. Add chat session title caching to avoid select-before-update on every first message.
+4. Add optional request coalescing for identical simultaneous queries.
 
-| Resource | Current Calls | Optimized? | Action Needed |
-|----------|--------------|------------|---------------|
-| **User** | 1 per session | ✅ Yes | None - Perfect! |
-| **Sessions** | 1 per app mount | ✅ Yes | None - Perfect! |
-| **Documents** | 1 per app mount | ✅ Yes | Optional: Add context for future scalability |
-| **Messages** | 1 per chat page | ✅ Yes | None - Correct pattern |
-
----
-
-## Recommended Optimizations
-
-### Option 1: Add DocumentsContext (Future-Proofing)
-
-**When to implement:**
-- If you plan to show documents in multiple pages
-- If you need to add/delete documents from different components
-- If you want centralized document state management
-
-**Benefits:**
-- Consistent pattern with UserContext
-- Easier to manage document uploads/deletions
-- Single source of truth for documents
-
-**Implementation Effort:** Low (~30 minutes)
-
----
-
-### Option 2: Enhance Existing Hooks with Better Caching
-
-**Current Issue:**
-- If user navigates away and back, hooks re-fetch data
-- No stale-while-revalidate pattern
-
-**Solution:**
-- Add timestamp-based caching
-- Implement stale-while-revalidate
-- Use React Query or SWR for advanced caching
-
-**Benefits:**
-- Faster page loads on navigation
-- Better offline support
-- Reduced server load
-
-**Implementation Effort:** Medium (~2 hours)
-
----
-
-## Conclusion
-
-**Your current architecture is already well-optimized!** 🎉
-
-The main network calls are:
-1. ✅ User data: 1 call (cached globally via context)
-2. ✅ Chat sessions: 1 call (fetched once in layout)
-3. ✅ Documents: 1 call (fetched once in layout)
-4. ✅ Messages: 1 call per chat (session-specific, correct behavior)
-
-**No critical optimizations needed.** The only enhancement would be adding a `DocumentsContext` for better state management and future scalability, but this is optional.
-
----
-
-## If You Want to Optimize Further
-
-I can implement:
-
-1. **DocumentsContext** - Similar to UserContext, for centralized document management
-2. **Enhanced Caching** - Add stale-while-revalidate pattern to all hooks
-3. **React Query Integration** - Replace custom hooks with React Query for advanced caching
-4. **Optimistic Updates** - Add optimistic updates for sessions and documents (already done for messages)
-
-Let me know which optimization you'd like to pursue!
+These are optional enhancements, not blockers.

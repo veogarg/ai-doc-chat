@@ -1,475 +1,155 @@
-# DocuMind - Architecture Overview
+# DocuMind Architecture Overview
 
-## 🏗️ System Architecture
+## System Layers
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         PRESENTATION LAYER                       │
-├─────────────────────────────────────────────────────────────────┤
-│  Pages (app/)                                                    │
-│  ├── page.tsx (Home - Router)                                   │
-│  ├── auth/page.tsx (Authentication)                             │
-│  └── (app)/                                                      │
-│      ├── layout.tsx (App Shell)                                 │
-│      └── chat/[id]/page.tsx (Chat Interface)                    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓ uses
-┌─────────────────────────────────────────────────────────────────┐
-│                        COMPONENT LAYER                           │
-├─────────────────────────────────────────────────────────────────┤
-│  UI Components (components/)                                     │
-│  ├── chat/                                                       │
-│  │   ├── ChatMessage.tsx                                        │
-│  │   ├── MessageList.tsx                                        │
-│  │   └── ChatInput.tsx                                          │
-│  ├── layout/                                                     │
-│  │   ├── Sidebar.tsx                                            │
-│  │   ├── Header.tsx                                             │
-│  │   ├── DocumentList.tsx                                       │
-│  │   └── ChatSessionList.tsx                                    │
-│  ├── auth/                                                       │
-│  │   └── AuthForm.tsx                                           │
-│  └── ui/ (shadcn components)                                    │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓ uses
-┌─────────────────────────────────────────────────────────────────┐
-│                          HOOKS LAYER                             │
-├─────────────────────────────────────────────────────────────────┤
-│  Custom Hooks (hooks/)                                           │
-│  ├── useAuth.ts           → Authentication state                │
-│  ├── useUser.ts           → User data fetching                  │
-│  ├── useChatSessions.ts   → Chat sessions management            │
-│  ├── useChatMessages.ts   → Messages with optimistic updates    │
-│  ├── useDocuments.ts      → Documents listing                   │
-│  ├── useFileUpload.ts     → File upload orchestration           │
-│  └── useAutoScroll.ts     → Auto-scroll behavior                │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓ uses
-┌─────────────────────────────────────────────────────────────────┐
-│                        SERVICE LAYER                             │
-├─────────────────────────────────────────────────────────────────┤
-│  Business Logic (lib/services/)                                  │
-│  ├── auth.service.ts      → Authentication operations           │
-│  ├── chat.service.ts      → Chat CRUD operations                │
-│  ├── document.service.ts  → Document management                 │
-│  └── ai.service.ts        → AI API calls                        │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓ uses
-┌─────────────────────────────────────────────────────────────────┐
-│                      DATA ACCESS LAYER                           │
-├─────────────────────────────────────────────────────────────────┤
-│  ├── Supabase Client (lib/supabase/)                            │
-│  │   └── client.ts                                              │
-│  └── AI Modules (lib/ai/)                                       │
-│      ├── gemini.client.ts  → Gemini initialization              │
-│      ├── embeddings.ts     → Embedding generation               │
-│      └── rag.ts            → RAG logic                          │
-└─────────────────────────────────────────────────────────────────┘
-                              ↓ uses
-┌─────────────────────────────────────────────────────────────────┐
-│                      EXTERNAL SERVICES                           │
-├─────────────────────────────────────────────────────────────────┤
-│  ├── Supabase (Database + Storage + Auth)                       │
-│  └── Google Gemini AI (Embeddings + Chat)                       │
-└─────────────────────────────────────────────────────────────────┘
+```text
+Presentation (app/, components/)
+  -> Hooks and Contexts (hooks/, contexts/)
+    -> Client Services (lib/services/)
+      -> API Routes (app/api/*)
+        -> AI + Data Core (lib/ai/, lib/api/, lib/supabase/server.ts)
+          -> External Systems (Supabase, Gemini)
 ```
 
----
+## Core Runtime Components
 
-## 📊 Data Flow
+### Client
+- `app/(app)/chat/[id]/page.tsx`
+  - Orchestrates user send flow, streaming updates, and upload actions
+- `app/(app)/layout.tsx`
+  - App shell, auth gate, sidebar data wiring
+- `contexts/UserContext.tsx`
+  - Current authenticated user state
+- `contexts/DocumentsContext.tsx`
+  - Centralized document list state and mutation helpers
+- `hooks/useChatMessages.ts`
+  - Message loading and optimistic persistence
+- `lib/services/ai.service.ts`
+  - Client wrapper for `/api/chat` and `/api/process-file`
 
-### 1. Authentication Flow
-```
-User Input (AuthForm)
-    ↓
-useAuth Hook
-    ↓
-AuthService
-    ↓
-Supabase Auth
-    ↓
-User Session Created
-```
+### Server Routes
+- `app/api/chat/route.ts`
+  - Input validation
+  - RAG preparation
+  - cache lookup
+  - generation (streaming or non-streaming)
+  - observability logging
+- `app/api/process-file/route.ts`
+  - Input validation
+  - file download
+  - PDF parse
+  - advanced chunking
+  - embedding with retries and cache
+  - vector persistence
+  - cache invalidation and metrics
+- `app/api/evaluate/route.ts`
+  - Input validation
+  - automated evaluation pipeline
 
-### 2. Chat Message Flow
-```
-User Types Message (ChatInput)
-    ↓
-ChatPage.handleSendMessage()
-    ↓
-useChatMessages.addMessage()
-    ↓
-ChatService.saveMessage()
-    ↓
-Supabase Database
-    ↓
-AIService.generateResponse()
-    ↓
-API Route (/api/chat)
-    ↓
-RAG Module (retrieveRelevantChunks + generateRAGResponse)
-    ↓
-Gemini AI
-    ↓
-Response Saved to Database
-    ↓
-UI Updated (MessageList)
-```
+### Shared Server Infrastructure
+- `lib/supabase/server.ts`
+  - Singleton service-role Supabase client factory
+- `lib/api/schemas.ts`
+  - zod schemas for API request validation
+- `lib/api/responses.ts`
+  - standardized validation/internal error responses
 
-### 3. File Upload Flow
-```
-User Selects File (ChatInput)
-    ↓
-ChatPage.handleFileUpload()
-    ↓
-useFileUpload.uploadFile()
-    ↓
-DocumentService.uploadFile()
-    ↓
-Supabase Storage
-    ↓
-DocumentService.saveDocumentRecord()
-    ↓
-Supabase Database
-    ↓
-AIService.processDocument()
-    ↓
-API Route (/api/process-file)
-    ↓
-PDF Parsing + Text Chunking
-    ↓
-Embedding Generation
-    ↓
-Store in Vector Database
-    ↓
-Success Message in Chat
-```
+### AI Pipeline Modules
+- `lib/ai/rag.ts`
+  - RAG orchestration, prompt assembly, retrieval fallback (`match_chunks_v2` -> `match_chunks`), caching integration
+- `lib/ai/rerank.ts`
+  - Hybrid reranking (semantic + lexical)
+- `lib/ai/cross-document.ts`
+  - Multi-document grouping and synthesis notes
+- `lib/ai/cache.ts`
+  - TTL caches for embeddings/retrieval/responses
+- `lib/ai/retry.ts`
+  - reusable retry with exponential backoff + jitter
+- `lib/ai/monitoring.ts`
+  - stage timing, token estimation, optional cost estimation, persistence to `ai_observability_events`
+- `lib/ai/evaluation.ts`
+  - automated quality scoring and persistence to `rag_evaluations`
+- `lib/utils/chunk.ts`
+  - section-aware chunking with overlap and fallback sentence splitting
 
----
+## End-to-End Flows
 
-## 🔄 State Management
+### Chat Flow
+1. User sends message from chat page.
+2. User message is saved via `chatService.saveMessage`.
+3. Client calls `/api/chat?stream=true`.
+4. Route validates payload with `ChatRequestSchema`.
+5. `prepareRAG(...)` performs:
+   - query embedding
+   - retrieval from Supabase RPC
+   - reranking
+   - cross-document synthesis context
+   - prompt construction
+6. Response cache is checked.
+7. If cache miss, Gemini stream starts and chunks are returned incrementally.
+8. Final response is cached and observability event is persisted.
+9. Client saves final AI message to `messages` table.
 
-### Client-Side State (React Hooks)
-```
-useAuth
-├── user: User | null
-├── loading: boolean
-├── signIn()
-├── signUp()
-└── signOut()
+### Document Processing Flow
+1. User uploads file to Supabase Storage (`user-files` bucket).
+2. Client calls `/api/process-file`.
+3. Route validates payload with `ProcessFileRequestSchema`.
+4. PDF is downloaded and parsed.
+5. `chunkDocument` produces section-aware chunks.
+6. Chunks are embedded with retries and cached where possible.
+7. Old chunks for same file are deleted.
+8. New chunk vectors are inserted in batches.
+9. User-scoped AI caches are invalidated.
+10. Metrics are persisted.
 
-useUser
-├── user: User | null
-├── loading: boolean
-└── reload()
+### Evaluation Flow
+1. Client/script posts `{ userId, cases }` to `/api/evaluate`.
+2. Route validates payload with `EvaluateRequestSchema`.
+3. Each case runs through RAG + generation.
+4. Scores computed:
+   - retrieval coverage
+   - answer coverage
+   - groundedness
+   - overall score
+5. Summary/results returned and optionally persisted.
 
-useChatSessions
-├── sessions: ChatSession[]
-├── loading: boolean
-├── error: Error | null
-├── reload()
-├── createSession()
-└── updateSessionTitle()
+## Data Model
 
-useChatMessages
-├── messages: ChatMessage[]
-├── loading: boolean
-├── error: Error | null
-├── reload()
-├── addMessage()
-├── addOptimisticMessage()
-└── setMessages()
+Main tables:
+- `chat_sessions`
+- `messages`
+- `user_documents`
+- `document_chunks`
 
-useDocuments
-├── documents: UserDocument[]
-├── loading: boolean
-├── error: Error | null
-└── reload()
+Upgrade tables:
+- `ai_observability_events`
+- `rag_evaluations`
 
-useFileUpload
-├── status: UploadStatus
-├── uploadFile()
-├── reset()
-└── isUploading: boolean
-```
+RPC functions:
+- `match_chunks`
+- `match_chunks_v2`
 
-### Server-Side State (Supabase)
-```
-Database Tables:
-├── chat_sessions
-│   ├── id
-│   ├── user_id
-│   ├── title
-│   └── created_at
-├── messages
-│   ├── id
-│   ├── session_id
-│   ├── role
-│   ├── content
-│   └── created_at
-├── user_documents
-│   ├── id
-│   ├── user_id
-│   ├── file_name
-│   ├── file_path
-│   └── created_at
-└── document_chunks
-    ├── id
-    ├── user_id
-    ├── file_name
-    ├── content
-    ├── embedding (vector)
-    └── created_at
+## Configuration
 
-Storage Buckets:
-└── user-files/
-    └── {user_id}/{timestamp}_{filename}
-```
+`lib/constants/config.ts` defines runtime knobs:
+- chunk sizing and overlap
+- retrieval limits
+- cache TTLs
+- retry attempts
+- model names
 
----
+## Reliability and Safety
 
-## 🎯 Component Hierarchy
+- Strict server input validation with zod
+- Standardized API error shape
+- Retry strategy for transient failures
+- RLS-based tenant isolation in Supabase
+- Service-role usage restricted to server routes
 
-```
-RootLayout (app/layout.tsx)
-└── Page Router
-    ├── Home (app/page.tsx)
-    │   └── Redirects to /auth or /chat
-    │
-    ├── AuthPage (app/auth/page.tsx)
-    │   └── AuthForm
-    │       ├── Email Input
-    │       ├── Password Input
-    │       ├── Sign In Button
-    │       └── Sign Up Button
-    │
-    └── AppLayout (app/(app)/layout.tsx)
-        ├── Sidebar
-        │   ├── Logo Link
-        │   ├── New Chat Button
-        │   ├── DocumentList
-        │   │   └── Document Items
-        │   └── ChatSessionList
-        │       └── Session Links
-        │
-        └── Main Area
-            ├── Header
-            │   ├── User Email
-            │   └── Logout Button
-            │
-            └── ChatPage (app/(app)/chat/[id]/page.tsx)
-                ├── MessageList
-                │   └── ChatMessage (multiple)
-                │       ├── Role Label
-                │       └── Message Content
-                │
-                └── ChatInput
-                    ├── File Upload Button
-                    ├── Message Input
-                    └── Send Button
-```
+## Current Architectural Strengths
 
----
-
-## 🔐 Security Architecture
-
-### Authentication
-```
-Client → Supabase Auth → JWT Token → Stored in Cookie
-```
-
-### Authorization
-```
-Row Level Security (RLS) in Supabase:
-├── Users can only see their own chat sessions
-├── Users can only see their own messages
-├── Users can only see their own documents
-└── Users can only access their own files
-```
-
-### API Security
-```
-API Routes:
-├── Validate user authentication
-├── Validate input parameters
-├── Use service role key for admin operations
-└── Return proper error codes
-```
-
----
-
-## 🚀 Performance Optimizations
-
-### 1. Code Splitting
-- Dynamic imports for services
-- Route-based code splitting (Next.js)
-
-### 2. Optimistic Updates
-- Messages appear instantly
-- Background sync with database
-
-### 3. Lazy Loading
-- Components loaded on demand
-- Services imported when needed
-
-### 4. Memoization Ready
-- Pure components
-- Stable function references
-- Proper dependency arrays
-
-### 5. Database Optimization
-- Indexed queries
-- Vector search for embeddings
-- Efficient pagination
-
----
-
-## 📦 Module Dependencies
-
-```
-Pages
-  ↓ depends on
-Hooks
-  ↓ depends on
-Services
-  ↓ depends on
-Data Access (Supabase/AI)
-  ↓ depends on
-External APIs
-```
-
-**Key Principle**: Dependencies flow downward only (no circular dependencies)
-
----
-
-## 🧪 Testing Strategy
-
-### Unit Tests
-```
-Services (lib/services/)
-├── auth.service.test.ts
-├── chat.service.test.ts
-├── document.service.test.ts
-└── ai.service.test.ts
-
-Utilities (lib/utils/)
-├── chunk.test.ts
-├── file.test.ts
-└── cn.test.ts
-
-AI Modules (lib/ai/)
-├── embeddings.test.ts
-└── rag.test.ts
-```
-
-### Integration Tests
-```
-Hooks (hooks/)
-├── useAuth.test.ts
-├── useChatMessages.test.ts
-└── useFileUpload.test.ts
-```
-
-### E2E Tests
-```
-User Flows
-├── Authentication flow
-├── Create chat session
-├── Send message
-└── Upload document
-```
-
----
-
-## 🔧 Configuration Management
-
-### Environment Variables
-```
-.env
-├── NEXT_PUBLIC_SUPABASE_URL
-├── NEXT_PUBLIC_SUPABASE_ANON_KEY
-├── SUPABASE_SERVICE_ROLE_KEY
-└── GEMINI_API_KEY
-```
-
-### Application Config
-```typescript
-lib/constants/config.ts
-├── APP_CONFIG
-│   ├── CHUNK_SIZE
-│   ├── MAX_MATCH_COUNT
-│   ├── DEFAULT_CHAT_TITLE
-│   ├── GEMINI_EMBEDDING_MODEL
-│   └── GEMINI_CHAT_MODEL
-├── STORAGE_BUCKETS
-│   └── USER_FILES
-└── DATABASE_TABLES
-    ├── CHAT_SESSIONS
-    ├── MESSAGES
-    ├── USER_DOCUMENTS
-    └── DOCUMENT_CHUNKS
-```
-
----
-
-## 📈 Scalability Considerations
-
-### Horizontal Scaling
-- Stateless API routes
-- Session stored in database
-- No server-side state
-
-### Database Scaling
-- Indexed queries
-- Efficient vector search
-- Connection pooling (Supabase)
-
-### Caching Strategy
-- Client-side caching (React Query ready)
-- CDN for static assets
-- Edge caching (Vercel)
-
-### Future Enhancements
-1. Add Redis for caching
-2. Implement WebSocket for real-time updates
-3. Add queue for background jobs
-4. Implement rate limiting
-5. Add monitoring and logging
-
----
-
-## 🎨 Design Patterns Summary
-
-1. **Singleton**: Services
-2. **Repository**: Data access layer
-3. **Custom Hook**: State management
-4. **Composition**: Component structure
-5. **Dependency Injection**: Props-based
-6. **Factory**: Service creation
-7. **Observer**: React state updates
-8. **Strategy**: Different AI models
-
----
-
-## 📚 Documentation Structure
-
-```
-/docs (future)
-├── architecture.md (this file)
-├── api-reference.md
-├── component-library.md
-├── hooks-reference.md
-├── services-reference.md
-├── deployment.md
-└── contributing.md
-```
-
----
-
-**Architecture designed for:**
-- ✅ Maintainability
-- ✅ Scalability
-- ✅ Testability
-- ✅ Performance
-- ✅ Security
-- ✅ Developer Experience
+- Clear client/server separation
+- Composable AI pipeline modules
+- Reusable route validation and response patterns
+- Scalable retrieval/generation instrumentation
+- Streaming UX integrated end-to-end
